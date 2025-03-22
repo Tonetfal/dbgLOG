@@ -13,10 +13,10 @@ Using the library is as simple as copying the `dbgLog` folder into your project 
 
 
 ![dbgLOG Usage Overview](Resources/LogOutput.png)
-> Small exaple of the console output of the log macros in action
+> Small example of the console output of the log macros in action
 
 
-This library is built off of the `std::format` and has better formatting support than standard
+This library is built off of the `std::format` function and has better formatting support than standard
 FString::Format (which doesn't even let you specify arg placements or decimal places) and is a LOT
 safer than Printf formats which crash at runtime by simply passing the wrong % specifier.
 
@@ -33,13 +33,26 @@ There are really only two macros to concern yourself with - `dbgLOG` and `dbgLOG
 
 dbgLOG is your standard `std::format` log macro that takes a format message and optional logs, some example usages are as follows:
 ```cpp
-dbgLOG( "No args, regular log" );												// Outputs: "No args, regular log"
-dbgLOG( "Mr Tim {0}", "Sweeney" );											    // Outputs: "Mr Tim Sweeney"
-dbgLOG( "{1}{0}", "Bar", "Foo" );												// Outputs: "Foo Bar" (see how we can reorder the arguments depending on their placement)
-dbgLOG( "{1}{0} {2}", "Bar", "Foo", 42 );										// Outputs: "Foo Bar 42"
-dbgLOG( "{0:.3f}", 3.14159265 );												// Outputs: "3.142" (see how we specify :.3f to output only up to three decimal places)
-dbgLOG( "{0}", 3.141592653589793238 );										    // Outputs: "3.141592653589793238" (outputs the entire value)
-dbgLOG( "{0:.3f}, {1:.5f}",	3.141592653589793238, 6.283185307179586476 );		// Outputs: "3.142, 6.28319"
+// Outputs: "No args, regular log"
+dbgLOG( "No args, regular log" );												
+
+// Outputs: "Mr Tim Sweeney"
+dbgLOG( "Mr Tim {0}", "Sweeney" );											    
+
+// Outputs: "Foo Bar" (see how we can reorder the arguments depending on their placement)
+dbgLOG( "{1}{0}", "Bar", "Foo" );												
+
+// Outputs: "Foo Bar 42"
+dbgLOG( "{1}{0} {2}", "Bar", "Foo", 42 );										
+
+// Outputs: "3.142" (see how we specify :.3f to output only up to three decimal places)
+dbgLOG( "{0:.3f}", 3.14159265 );												
+
+// Outputs: "3.141592653589793238" (outputs the entire value)
+dbgLOG( "{0}", 3.141592653589793238 );										    
+
+// Outputs: "3.142, 6.28319"
+dbgLOG( "{0:.3f}, {1:.5f}",	3.141592653589793238, 6.283185307179586476 );		
 ```
 
 We can also log containers(such as; TArray, TMap, Tuples, C style arrays), enums, structs, pointers etc in a native fashion. Containers are recursive and call the same format function
