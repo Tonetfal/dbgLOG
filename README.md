@@ -12,7 +12,7 @@ Supports Engine Version 5.3.2 and above and requires c++20 (which is default on 
 
 > Installing: <br>
 >  Installing is as simple as copying the `dbgLog` folder from this repo into your project.<br>
-> At the end of the day it's just two header files so as long as you update `dbgLog.h` to include `LLog.h` from whever you place it then everything
+> At the end of the day it's just two header files so as long as you update `dbgLog.h` to include `LLog.h` from where ever you place it then everything
 > should work fine. <br>
 > When using the macro/s you will only need to include `dbgLog.h` in your code.
 
