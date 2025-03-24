@@ -7,9 +7,15 @@ This library is built on top of LLog - https://github.com/landelare/llog and add
 the actual macros and Builder pattern for logging (more on this later). But a HUGE shout out goes
 to Laura for her work and logging articles https://landelare.github.io/2022/04/28/better-ue_log.html
 
+Supports Engine Version 5.3.2 and above and requires c++20 (which is default on 5.3 an up).
 
 
-Using the library is as simple as copying the `dbgLog` folder into your project and including the header file in your code.
+> Installing: <br>
+>  Installing is as simple as copying the `dbgLog` folder from this repo into your project.<br>
+> At the end of the day it's just two header files so as long as you update `dbgLog.h` to include `LLog.h` from whever you place it then everything
+> should work fine. <br>
+> When using the macro/s you will only need to include `dbgLog.h` in your code.
+
 
 
 ![dbgLOG Usage Overview](Resources/LogOutput.png)

@@ -18,10 +18,10 @@
 //   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
 //
 //  0. You just DO WHAT THE FUCK YOU WANT TO.
-
-
 #pragma once
-#include "dbgLog/Private/LLog.h"
+
+#include "Private/LLog.h"
+#include "VisualLogger/VisualLogger.h"
 #include "Misc/EngineVersionComparison.h"
 
 
@@ -194,12 +194,56 @@
     DBG::Log::Log(__COUNTER__, std::source_location::current(), Name,  TEXT(Msg) __VA_OPT__(,) __VA_ARGS__); \
 } while(false)
 
+
+
+/**
+ *	This your standard formatted log message, could either be `"Hello World" or "Hello World {0}" where 0 is placement
+ * for your log arguments, for example:
+ * \code
+ * // This takes no args.
+ * dbgLOG( "Hello World" );
+ * \endcode
+ * \code
+ * // This takes any amount of args.
+ * dbgLOG( "Hello World {0}", 42 );
+ * \endcode
+ * \code
+ * // This is how you would format a float/double to only show 3 places - similar to printf's `%.3f`
+ * dbgLOG( "Hello World {0:.3f}", 3.1415926535 );
+ * \endcode
+ */
 #define dbgLOG(Msg, ...) do\
 {\
     DBG::Log::Log(__COUNTER__, std::source_location::current(), DBG::Log::DbgLogArgs{}, TEXT(Msg) __VA_OPT__(,) __VA_ARGS__);\
 }while(false)
 
 
+/**
+ * This a slightly more advanced log where you have the ability to set extra information about the log, such as its verbosity, where it outputs (screen or console) and a lot more.
+ * This log is more less the same as the standard log but with one param at the beginning that begins with the `.` operator to access the log args object.
+ * For example:
+ *
+ * \code
+ * // This outputs our log to only the screen but Scr could have also been `Con` or `Both`
+ * 
+ * dbgLOGV( .Output(Scr), "Hello World" ); 
+ * \endcode
+ * \code
+ * // This outputs as long as the condition is true, the input could be some function like
+ * // `HasAmmo()` and it only logs if we have ammo.
+ * 
+ * dbgLOGV( .Condition( true ), "Hello World" );
+ * \endcode
+ * \code
+ * // Lastly you can chain these args like so.
+ * // This prints "Hello World 42" along with the source location of the macro
+ * // (file, line number and function it was called from),
+ * // to the console with a yellow warning verbosity and has the runtime category "dbgPlayer"
+ * 
+ * dbgLOGV( .LogSourceLoc().Output( Con ).Verbosity( ELogVerbosity::Warning ).Category( "Player" ) ,
+ *	"Hello World {0}", 42 );
+ * \endcode
+ */
 #define dbgLOGV(Args, Msg, ...) _INTERNAL_DBGLOGV(Args, Msg, _CONCAT(LogArgs, __COUNTER__) __VA_OPT__(,) __VA_ARGS__)
 
 
@@ -439,7 +483,7 @@ namespace DBG::Log
 			const FVector& UpDir,
 			float Radius,
 			FColor DiskColor = FColor::Orange,
-			bool bDrawWireframe = false,
+			uint16 Thickness = 1,
 			bool bOnlyLogVisually = true);
 								
 		DbgLogArgs& VisualLogCapsule(UObject* Owner,
@@ -447,7 +491,7 @@ namespace DBG::Log
 			const FRotator Rotation,
 			float Radius,
 			float HalfHeight,
-			FColor ArrowColor = FColor::Orange,
+			FColor CapsuleColor = FColor::Orange,
 			bool bDrawWireframe = false,
 			bool bOnlyLogVisually = true);
 			
@@ -614,10 +658,11 @@ namespace DBG::Log
 
 		
 		
-#if WITH_EDITORONLY_DATA
+#if ENABLE_VISUAL_LOG
+		// The reason for manually calling these instead of using VLOG is that VLOG wanted to be annoying and
+		// assume our log verbosity is a constant IE `ELogVerbosity::MacroVerbosity`
 		if( LogArgs.VisualLoggerOwnerValue && FVisualLogger::IsRecording() )
 		{
-
 			switch (LogArgs.VisualLogShapeValue)
 			{
 				case DbgLogArgs::EDbgVisualLogShape::None:
@@ -628,16 +673,27 @@ namespace DBG::Log
 					}
 				case DbgLogArgs::EDbgVisualLogShape::Sphere:
 					{
+#if UE_VERSION_NEWER_THAN(5, 4, 0)
 						FVisualLogger::SphereLogf( LogArgs.VisualLoggerOwnerValue,
 							LogCategory, LogArgs.VerbosityValue,
 							LogArgs.VisualLogShapeLocationValue,
 							LogArgs.VisualLogVectorOne.X,
 							LogArgs.VisualLogShapeColorValue,
-							LogArgs.bDrawWireframeValue, TEXT("%s"), *Message );
+							LogArgs.bDrawWireframeValue,
+							TEXT("%s"), *Message );
+#else
+						FVisualLogger::GeometryShapeLogf( LogArgs.VisualLoggerOwnerValue,
+							LogCategory, LogArgs.VerbosityValue,
+							LogArgs.VisualLogShapeLocationValue,
+							LogArgs.VisualLogVectorOne.X,
+							LogArgs.VisualLogShapeColorValue,
+							TEXT("%s"), *Message );
+#endif
 						break;
 					}
 				case DbgLogArgs::EDbgVisualLogShape::Box:
 					{
+#if UE_VERSION_NEWER_THAN(5, 4, 0)
 						FVisualLogger::BoxLogf( LogArgs.VisualLoggerOwnerValue,
 							LogCategory, LogArgs.VerbosityValue,
 							FBox{LogArgs.VisualLogVectorOne, LogArgs.VisualLogVectorTwo},
@@ -645,11 +701,23 @@ namespace DBG::Log
 									FRotationMatrix(LogArgs.VisualLogShapeRotationValue) *
 									FTranslationMatrix(LogArgs.VisualLogShapeLocationValue) },
 							LogArgs.VisualLogShapeColorValue,
-							LogArgs.bDrawWireframeValue, TEXT("%s"), *Message );
+							LogArgs.bDrawWireframeValue,
+							TEXT("%s"), *Message );
+#else
+						FVisualLogger::GeometryBoxLogf( LogArgs.VisualLoggerOwnerValue,
+							LogCategory, LogArgs.VerbosityValue,
+							FBox{LogArgs.VisualLogVectorOne, LogArgs.VisualLogVectorTwo},
+							FMatrix{ FScaleMatrix(LogArgs.VisualLogShapeScaleValue) *
+									FRotationMatrix(LogArgs.VisualLogShapeRotationValue) *
+									FTranslationMatrix(LogArgs.VisualLogShapeLocationValue) },
+							LogArgs.VisualLogShapeColorValue,
+							TEXT("%s"), *Message );
+#endif
 						break;
 					}
 				case DbgLogArgs::EDbgVisualLogShape::Cone:
 					{
+#if UE_VERSION_NEWER_THAN(5, 4, 0)
 						FVisualLogger::ConeLogf( LogArgs.VisualLoggerOwnerValue,
 							LogCategory, LogArgs.VerbosityValue,
 							LogArgs.VisualLogShapeLocationValue,
@@ -657,17 +725,41 @@ namespace DBG::Log
 							LogArgs.VisualLogVectorTwo.X,
 							LogArgs.VisualLogVectorTwo.Y,
 							LogArgs.VisualLogShapeColorValue,
-							LogArgs.bDrawWireframeValue, TEXT("%s"), *Message );
+							LogArgs.bDrawWireframeValue,
+							TEXT("%s"), *Message );
+#else
+						FVisualLogger::GeometryShapeLogf( LogArgs.VisualLoggerOwnerValue,
+							LogCategory, LogArgs.VerbosityValue,
+							LogArgs.VisualLogShapeLocationValue,
+							LogArgs.VisualLogVectorOne,
+							LogArgs.VisualLogVectorTwo.X,
+							LogArgs.VisualLogVectorTwo.Y,
+							LogArgs.VisualLogShapeColorValue,
+							TEXT("%s"), *Message );
+						
 						break;
+#endif
 					}
 				case DbgLogArgs::EDbgVisualLogShape::Line:
 					{
+#if UE_VERSION_NEWER_THAN(5, 4, 0)
 						FVisualLogger::SegmentLogf( LogArgs.VisualLoggerOwnerValue,
 							LogCategory, LogArgs.VerbosityValue,
 							LogArgs.VisualLogShapeLocationValue,
 							LogArgs.VisualLogVectorOne,
 							LogArgs.VisualLogShapeColorValue,
-							LogArgs.bDrawWireframeValue, TEXT("%s"), *Message );
+							static_cast<uint16>(LogArgs.VisualLogVectorTwo.X),
+							TEXT("%s"), *Message );
+#else
+						FVisualLogger::GeometryShapeLogf( LogArgs.VisualLoggerOwnerValue,
+							LogCategory, LogArgs.VerbosityValue,
+							LogArgs.VisualLogShapeLocationValue,
+							LogArgs.VisualLogVectorOne,
+							LogArgs.VisualLogShapeColorValue,
+							static_cast<uint16>(LogArgs.VisualLogVectorTwo.X),
+							TEXT("%s"), *Message );
+#endif
+	
 						break;
 					}
 				case DbgLogArgs::EDbgVisualLogShape::Arrow:
@@ -688,11 +780,13 @@ namespace DBG::Log
 							LogArgs.VisualLogVectorOne,
 							LogArgs.VisualLogVectorTwo.X,
 							LogArgs.VisualLogShapeColorValue,
-							LogArgs.bDrawWireframeValue, TEXT("%s"), *Message );
+							static_cast<uint16>(LogArgs.VisualLogVectorTwo.Y),
+							TEXT("%s"), *Message );
 						break;
 					}
 				case DbgLogArgs::EDbgVisualLogShape::Capsule:
 					{
+#if UE_VERSION_NEWER_THAN(5, 4, 0)
 						FVisualLogger::CapsuleLogf( LogArgs.VisualLoggerOwnerValue,
 							LogCategory, LogArgs.VerbosityValue,
 							LogArgs.VisualLogShapeLocationValue,
@@ -700,7 +794,18 @@ namespace DBG::Log
 							LogArgs.VisualLogVectorOne.Y,
 							LogArgs.VisualLogShapeRotationValue.Quaternion(),
 							LogArgs.VisualLogShapeColorValue,
-							LogArgs.bDrawWireframeValue, TEXT("%s"), *Message );
+							LogArgs.bDrawWireframeValue,
+							TEXT("%s"), *Message );
+#else
+						FVisualLogger::GeometryShapeLogf(LogArgs.VisualLoggerOwnerValue,
+							LogCategory, LogArgs.VerbosityValue,
+							LogArgs.VisualLogShapeLocationValue,
+							LogArgs.VisualLogVectorOne.X,
+							LogArgs.VisualLogVectorOne.Y,
+							LogArgs.VisualLogShapeRotationValue.Quaternion(),
+							LogArgs.VisualLogShapeColorValue,
+							TEXT("%s"), *Message );
+#endif
 						break;
 					}
 			}
@@ -1110,7 +1215,7 @@ namespace DBG::Log
 	
 	inline DbgLogArgs& DbgLogArgs::VisualLogDisk(UObject* Owner,
 		const FVector& Start, const FVector& UpDir, float Radius,
-		FColor ArrowColor, bool bDrawWireframe, bool bOnlyLogVisually)
+		FColor ArrowColor, uint16 Thickness, bool bOnlyLogVisually)
 	{
 		// Only support a single visual log per macro.
 		if (VisualLoggerOwnerValue == nullptr)
@@ -1122,8 +1227,8 @@ namespace DBG::Log
 			VisualLogShapeLocationValue = Start;
 			VisualLogVectorOne = UpDir;
 			VisualLogVectorTwo.X = Radius;
+			VisualLogVectorTwo.Y = Thickness;
 				
-			bDrawWireframeValue = bDrawWireframe;
 			bOnlyUseVisualLogger = bOnlyLogVisually;
 		}
 		return *this;
@@ -1132,14 +1237,14 @@ namespace DBG::Log
 	
 	inline DbgLogArgs& DbgLogArgs::VisualLogCapsule(UObject* Owner,
 		const FVector& Base, const FRotator Rotation, float Radius,
-		float HalfHeight, FColor ArrowColor, bool bDrawWireframe, bool bOnlyLogVisually)
+		float HalfHeight, FColor CapsuleColor, bool bDrawWireframe, bool bOnlyLogVisually)
 	{
 		// Only support a single visual log per macro.
 		if (VisualLoggerOwnerValue == nullptr)
 		{
 			VisualLoggerOwnerValue = Owner;
 			VisualLogShapeValue = EDbgVisualLogShape::Capsule;
-			VisualLogShapeColorValue = ArrowColor;
+			VisualLogShapeColorValue = CapsuleColor;
 
 			VisualLogShapeLocationValue = Base;
 			VisualLogShapeRotationValue = Rotation;
