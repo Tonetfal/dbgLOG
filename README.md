@@ -2,10 +2,10 @@
 
 
 
-This library is built on top of LLog - https://github.com/landelare/llog and adds some QOL features
-(like logging compile-time arrays, not crashing on null pointers and a few other things) as well as implementing
-the actual macros and Builder pattern for logging (more on this later). But a HUGE shout out goes
+This library is built on top of LLog - https://github.com/landelare/llog and adds some features on top
+such as the macros and Builder pattern for logging (more on this later). But a HUGE shout out goes
 to Laura for her work and logging articles https://landelare.github.io/2022/04/28/better-ue_log.html
+
 
 Supports Engine Version 5.3.2 and above and requires c++20 (which is default on 5.3 an up).
 
@@ -163,9 +163,10 @@ argument just returns a reference to the original builder object.
 
 This style of a log macro allows for basically multiple variadic args (the builder and the format args).
 
+```cpp
 Here is a simple example of how we set the verbosity of our log
 dbgLOGV( .Verbosity( ELogVerbosity::Warning ), "No args, regular log");
-
+```
 
 ```cpp
 // Here we choose to make this log output to both screen and console 

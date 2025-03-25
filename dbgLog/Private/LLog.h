@@ -228,7 +228,16 @@ namespace DBG::Log
 				{
 					Str += std::format(TEXT("{}, "), FormatArgument(std::forward<decltype(i)>(i))).c_str();
 				}
-				Str.LeftChopInline(2);
+				
+				if (Str.Len() > 1)
+				{
+					Str.LeftChopInline(2);
+				}
+				else
+				{
+					Str += TEXT(" Empty ");
+				}
+				
 				Str += TEXT("]");
 			}
 			else if constexpr (TIsTuple_V<V>)
@@ -238,7 +247,16 @@ namespace DBG::Log
 				{
 					((Str += std::format(TEXT("{}, "), FormatArgument(std::forward<A>(Args))).c_str()), ...);
 				});
-				Str.LeftChopInline(2);
+				
+				if (Str.Len() > 1)
+				{
+					Str.LeftChopInline(2);
+				}
+				else
+				{
+					Str += TEXT(" Empty ");
+				}
+				
 				Str += TEXT("}");
 			}
 			else if constexpr (requires { std::tuple_size_v<V>; })
@@ -248,7 +266,16 @@ namespace DBG::Log
 				{
 					((Str += std::format(L"{}, ", FormatArgument(std::forward<A>(args))).c_str()), ...);
 				}, std::forward<T>(Value));
-				Str.LeftChopInline(2);
+
+				if (Str.Len() > 1)
+				{
+					Str.LeftChopInline(2);
+				}
+				else
+				{
+					Str += TEXT(" Empty ");
+				}
+				
 				Str += TEXT("}");
 			}
 			// else if constexpr (your stuff goes here) { }
