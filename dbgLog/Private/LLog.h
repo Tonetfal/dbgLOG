@@ -85,7 +85,10 @@ namespace DBG::Log
 	template<typename T>
 	auto FormatArgument(T&& Value)
 	{
-		using DecayedT = std::decay_t<T>;
+		using UnderlyingType = std::remove_pointer_t<std::remove_reference_t<T>>;
+		constexpr bool bIsPointer = std::is_pointer_v<std::remove_cvref_t<decltype(Value)>>;
+
+		
 		// Block FName(ENoInit), etc. constructors before they'd match something
 		if constexpr (TInitValue<T>)
 		{
@@ -119,7 +122,7 @@ namespace DBG::Log
 			FString Str( TEXT("Error") );
 
 			// If the value is a pointer, check if it's valid before we try get out a value, for UObjects we can get a little more information.
-			if constexpr ( std::is_pointer_v<std::remove_cvref_t<decltype(Value)>> )
+			if constexpr ( bIsPointer )
 			{
 				if constexpr (std::is_convertible_v<T, const UObject*>)
 				{
@@ -174,11 +177,18 @@ namespace DBG::Log
 			{
 				Str = Value;
 			}
-			else if constexpr ( requires { { DecayedT::StaticStruct() } -> std::same_as<UScriptStruct*>; } )
+			else if constexpr ( requires { { UnderlyingType::StaticStruct() } -> std::same_as<UScriptStruct*>; } )
 			{
 				// Populate from ExportText if we don't provide a ToString or any of the other similar functions.
 				Str.Reset();
-				DecayedT::StaticStruct()->ExportText( Str, &Value, &Value, nullptr, PPF_None, nullptr );
+				if constexpr (bIsPointer)
+				{
+					UnderlyingType::StaticStruct()->ExportText( Str, Value, Value, nullptr, PPF_None, nullptr );
+				}
+				else
+				{
+					UnderlyingType::StaticStruct()->ExportText( Str, &Value, &Value, nullptr, PPF_None, nullptr );
+				}
 			}
 			else if constexpr (TIsUEnumClass<V>::Value) // won't work for legacy UENUMs
 			{

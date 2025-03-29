@@ -20,16 +20,14 @@
 //  0. You just DO WHAT THE FUCK YOU WANT TO.
 #pragma once
 
+#include "Framework/Notifications/NotificationManager.h"
+
 #include "Private/LLog.h"
 #include "VisualLogger/VisualLogger.h"
 #include "Misc/EngineVersionComparison.h"
 
-
-
-
-
-
-
+#include "Widgets/Notifications/SNotificationList.h"
+#include "dbgLog.generated.h"
 
 /**
  *	This library is built on top of LLog - https://github.com/landelare/llog and adds some QOL features
@@ -182,10 +180,23 @@
 
 
 
+UENUM(BlueprintType)
+enum EDbgLogOutput : uint8
+{
+	// Outputs only to the console
+	Con = 0,
+
+	// Outputs only the the screen (if possible, otherwise falls back to the console)
+	Scr,
+	
+	// Outputs to both the screen (if possible) and console.
+	Both
+};
+
+#define KEEP_DBG_LOG (!UE_BUILD_SHIPPING) || (USE_LOGGING_IN_SHIPPING) 
 
 
-
-#if (!UE_BUILD_SHIPPING) || (USE_LOGGING_IN_SHIPPING)
+#if KEEP_DBG_LOG
 
 #define _INTERNAL_DBGLOGV(Args, Msg, Name, ...) do\
 {\
@@ -250,26 +261,6 @@
 
 
 
-
-
-
-
-
-
-
-enum EDbgLogOutput : uint8
-{
-	// Outputs only to the console
-	Con = 0,
-
-	// Outputs only the the screen (if possible, otherwise falls back to the console)
-	Scr,
-	
-	// Outputs to both the screen (if possible) and console.
-	Both
-};
-
-
 namespace DBG::Log
 {
 	struct DbgLogArgs
@@ -330,13 +321,54 @@ namespace DBG::Log
 
 		// If called, enables the default format for the date and time which is prepended to the log.
 		ThisClass& LogDateAndTime() { bLogDateAndTime = true; return *this; }
-		
-		// Logs the date and time with the provided format
-		// %y = Year YY, %Y = Year YYYY, %m = Month 01-12, %d = Day 01-31
-		// %h = Hour 0-12, %H = Hour 00-23, %M = Minute 00-59, %S = Second 00-59, %s = Millisecond 000-999
-		// Example `.LogDateAndTime( TEXT( "%d/%m/%y %H:%M:%S" ) )`
-		ThisClass& LogDateAndTime(TStringView<TCHAR> Format) { bLogDateAndTime = true; DateTimeFormat = Format; return *this; }
 
+		/**
+		 * Lets this macro log to a slate notification popup in the bottom corner
+		 * @param bOnlyUseThisLog If true we do not attempt to also log to the console or screen.
+		 */
+		ThisClass& LogToSlateNotify(bool bOnlyUseThisLog = false)
+		{
+			bOnlyLogToSlateNotify = bOnlyUseThisLog;
+			bLogToSlateNotify = true;
+			return *this;
+		}
+
+		/**
+		 * Logs the provided message to a dialog box the user can interact with.
+		 * @param Response User response to the dialog
+		 * @param MsgType What type of dialog should be shown
+		 * @param bOnlyUseThisLog If true we do not attempt to also log to the console or screen.
+		 */
+		ThisClass& LogToMessageDialog(const TFunction<void(EAppReturnType::Type UserResponse)>& Response,
+			EAppMsgType::Type MsgType, bool bOnlyUseThisLog = false)
+		{
+			AppMessageResponse = Response;
+			AppMsgType = MsgType;
+			bOnlyLogToMessageDialog = bOnlyUseThisLog;
+			bLogToMessageDialog = true;
+			return *this;
+		}
+		
+		/** 
+		 * Logs a message to the editor message log (this is a window that pops up showing you any errors or warnings)
+		 * You would see this when accessing null in a BP graph for example after you quit PIE.
+		 * @param bShouldShowEditorMessageLogImmediately If true we instantly spawn the editor message log window,
+		 * otherwise you need to manually check the window
+		 */
+		ThisClass& LogToEditorMessageLog(bool bShouldShowEditorMessageLogImmediately = false)
+		{
+			bLogToEditorMessageLog = true;
+			bShowEditorMessageLogImmediately = bShouldShowEditorMessageLogImmediately;
+			return *this;
+		}
+		
+		/**
+		 * Logs the date and time with the provided format
+		 * %y = Year YY, %Y = Year YYYY, %m = Month 01-12, %d = Day 01-31
+		 * %h = Hour 0-12, %H = Hour 00-23, %M = Minute 00-59, %S = Second 00-59, %s = Millisecond 000-999
+		 * Example `.LogDateAndTime( TEXT( "%d/%m/%y %H:%M:%S" ) )` outputs `03/04/2025 06:42:29`
+		 */
+		ThisClass& LogDateAndTime(TStringView<TCHAR> Format) { bLogDateAndTime = true; DateTimeFormat = Format; return *this; }
 
 
 		ThisClass& DrawDebugCapsule(const UObject* WorldContextObject,
@@ -432,13 +464,13 @@ namespace DBG::Log
 		DbgLogArgs& VisualLogText(UObject* Owner,
 			bool bOnlyLogVisually = true);
 
-
+		// Logs a sphere with the visual logger system.
 		DbgLogArgs& VisualLogSphere(UObject* Owner,
 			const FVector& Location, float Radius,
 			bool bDrawWireframe = false,
 			bool bOnlyLogVisually = true);
 
-
+		// Logs a box with the visual logger system.
 		DbgLogArgs& VisualLogBox(UObject* Owner,
 			const FVector& MinExtent,
 			const FVector& MaxExtent,
@@ -448,14 +480,14 @@ namespace DBG::Log
 			bool bDrawWireframe = false,
 			bool bOnlyLogVisually = true);
 		
-		
+		// Logs the provided actors bounds into the visual logger system.
 		DbgLogArgs& VisualLogBounds(UObject* Owner,
 			const AActor* ActorToGetBoundsFrom,
 			FColor BoundsColor = FColor::Orange,
 			bool bDrawWireframe = false,
 			bool bOnlyLogVisually = true);
 
-		
+		// Logs a cone with the visual logger system.
 		DbgLogArgs& VisualLogCone(UObject* Owner,
 			const FVector& Location,
 			const FVector& Direction,
@@ -464,6 +496,7 @@ namespace DBG::Log
 			bool bDrawWireframe = false,
 			bool bOnlyLogVisually = true);
 
+		// Logs a line with the visual logger system.
 		DbgLogArgs& VisualLogLine(UObject* Owner,
 			const FVector& Start,
 			const FVector& End,
@@ -471,13 +504,14 @@ namespace DBG::Log
 			FColor LineColor = FColor::Orange,
 			bool bOnlyLogVisually = true);
 
-		
+		// Logs an arrow with the visual logger system.
 		DbgLogArgs& VisualLogArrow(UObject* Owner,
 			const FVector& Start,
 			const FVector& End,
 			FColor ArrowColor = FColor::Orange,
 			bool bOnlyLogVisually = true);
-					
+
+		// Logs a disk with the visual logger system.
 		DbgLogArgs& VisualLogDisk(UObject* Owner,
 			const FVector& Start,
 			const FVector& UpDir,
@@ -485,7 +519,8 @@ namespace DBG::Log
 			FColor DiskColor = FColor::Orange,
 			uint16 Thickness = 1,
 			bool bOnlyLogVisually = true);
-								
+
+		// Logs a capsule with the visual logger system.
 		DbgLogArgs& VisualLogCapsule(UObject* Owner,
 			const FVector& Base,
 			const FRotator Rotation,
@@ -494,7 +529,6 @@ namespace DBG::Log
 			FColor CapsuleColor = FColor::Orange,
 			bool bDrawWireframe = false,
 			bool bOnlyLogVisually = true);
-			
 
 	private:
 		static inline FName DefaultLogCategoryName = FName{"Log"};
@@ -502,6 +536,7 @@ namespace DBG::Log
 		UWorld* WCOResultValue						= nullptr;
 		UObject* VisualLoggerOwnerValue				= nullptr;
 		TStringView<TCHAR> DateTimeFormat			= nullptr;
+		TFunction<void(EAppReturnType::Type Response)> AppMessageResponse = nullptr;
 		
 		FString PrefixValue							= {};
 		FName CategoryNameValue						= DefaultLogCategoryName;
@@ -526,13 +561,21 @@ namespace DBG::Log
 		FVector VisualLogVectorTwo 					= FVector::ZeroVector;
 
 		FColor VisualLogShapeColorValue				= FColor::Orange;
-		ELogVerbosity::Type VerbosityValue			= ELogVerbosity::Display;
 		
-		uint8 bLogConditionValue:1 					= true;
-		uint8 bLogSourceLocation:1 					= false;
-		uint8 bLogDateAndTime:1 					= false;
-		uint8 bDrawWireframeValue:1 				= false;
-		uint8 bOnlyUseVisualLogger:1 				= false;
+		uint16 bLogConditionValue:1 				= true;
+		uint16 bLogSourceLocation:1 				= false;
+		uint16 bLogToSlateNotify:1 					= false;
+		uint16 bOnlyLogToSlateNotify:1 				= false;
+		uint16 bLogToMessageDialog:1 				= false;
+		uint16 bOnlyLogToMessageDialog:1 			= false;
+		uint16 bLogToEditorMessageLog:1 			= false;
+		uint16 bShowEditorMessageLogImmediately:1 	= false;
+		uint16 bLogDateAndTime:1 					= false;
+		uint16 bDrawWireframeValue:1 				= false;
+		uint16 bOnlyUseVisualLogger:1 				= false;
+
+		EAppMsgType::Type AppMsgType				= EAppMsgType::Type::Ok;
+		ELogVerbosity::Type VerbosityValue			= ELogVerbosity::Display;
 	};
 
 
@@ -554,6 +597,8 @@ namespace DBG::Log
 		// Format the actual log provided from the user.
 		FString Message = FormatMessage(std::move(Format), std::forward<A>(Args)...);
 
+
+		
 		// Configure how we present the log now.
 		static auto NetModeToStr = [](ENetMode Mode) -> FString
 		{
@@ -596,6 +641,8 @@ namespace DBG::Log
 				{ FPaths::GetCleanFilename( StringCast<wchar_t>(L.file_name()).Get() ), L.line(), FuncName } );
 		};
 
+
+		
 		if (LogArgs.PrefixValue.IsEmpty() == false)
 		{
 			if (UWorld* World = LogArgs.WCOResultValue)
@@ -608,7 +655,7 @@ namespace DBG::Log
 				else
 				{
 					Message = FString::Format(TEXT("[{0}] [{1}]: {2}"),
-						{LogArgs.PrefixValue, WorldToString(World), Message});
+						{ LogArgs.PrefixValue, WorldToString(World), Message } );
 				}
 			}
 			else
@@ -816,73 +863,194 @@ namespace DBG::Log
 			return;
 		}
 		
+		
 		switch (LogArgs.VerbosityValue)
 		{
 		case ELogVerbosity::Display:
 			{
-				if(LogArgs.ScreenColorValue == FColor::Transparent)
+				if( LogArgs.ScreenColorValue == FColor::Transparent )
 				{
-					LogArgs.ScrnColor(FColor::White);
+					LogArgs.ScrnColor( FColor::White );
 				}
-				if(LogArgs.ScreenDurationValue < 0)
+				
+				if( LogArgs.ScreenDurationValue < 0 )
 				{
 					LogArgs.ScrnDuration(10);
 				}
+				
+				if ( LogArgs.bLogToSlateNotify )
+				{
+					FNotificationInfo Info{ FText::FromString( Message ) };
+					Info.ExpireDuration = 6.f;
+					FSlateNotificationManager::Get().AddNotification( Info );
+				}
+
+				if ( LogArgs.bLogToEditorMessageLog )
+				{
+					FMessageLog MsgLog(LogCategory.GetCategoryName());
+					MsgLog.Info( FText::FromString( Message ) );
+
+					if ( LogArgs.bShowEditorMessageLogImmediately )
+					{
+						MsgLog.Open( EMessageSeverity::Type::Info );
+					}
+				}
+				
 				break;
 			}
 		case ELogVerbosity::Warning:
 			{
-				if(LogArgs.ScreenColorValue == FColor::Transparent)
+				if( LogArgs.ScreenColorValue == FColor::Transparent )
 				{
-					LogArgs.ScrnColor(FColor::Yellow);
+					LogArgs.ScrnColor( FColor::Yellow );
 				}
-				if(LogArgs.ScreenDurationValue < 0)
+				
+				if( LogArgs.ScreenDurationValue < 0 )
 				{
-					LogArgs.ScrnDuration(20);
+					LogArgs.ScrnDuration( 20 );
+				}
+				
+				if ( LogArgs.bLogToSlateNotify )
+				{
+					FNotificationInfo Info{ FText::FromString( Message ) };
+					Info.ExpireDuration = 15.f;
+					FSlateNotificationManager::Get().AddNotification( Info );
+				}
+
+				if ( LogArgs.bLogToEditorMessageLog )
+				{
+					FMessageLog MsgLog(LogCategory.GetCategoryName());
+					MsgLog.Warning( FText::FromString( Message ) );
+					
+					if ( LogArgs.bShowEditorMessageLogImmediately )
+					{
+						MsgLog.Open( EMessageSeverity::Type::Warning );
+					}
 				}
 				break;
 			}
 		case ELogVerbosity::Error:
 			{
-				if(LogArgs.ScreenColorValue == FColor::Transparent)
+				if( LogArgs.ScreenColorValue == FColor::Transparent )
 				{
-					LogArgs.ScrnColor(FColor::Red);
+					LogArgs.ScrnColor( FColor::Red );
 				}
-				if(LogArgs.ScreenDurationValue < 0)
+				
+				if( LogArgs.ScreenDurationValue < 0 )
 				{
-					LogArgs.ScrnDuration(30);
+					LogArgs.ScrnDuration( 30 );
 				}
+				
+				if ( LogArgs.bLogToSlateNotify )
+				{
+					FNotificationInfo Info{ FText::FromString( Message ) };
+					Info.ExpireDuration = 30.f;
+					FSlateNotificationManager::Get().AddNotification( Info );
+				}
+
+				if ( LogArgs.bLogToEditorMessageLog )
+				{
+					FMessageLog MsgLog(LogCategory.GetCategoryName());
+					MsgLog.Error( FText::FromString( Message ) );
+					
+					if ( LogArgs.bShowEditorMessageLogImmediately )
+					{
+						MsgLog.Open( EMessageSeverity::Type::Error );
+					}
+				}
+				
 				break;
 			}
 		case ELogVerbosity::Fatal:
 			{
-				if(LogArgs.ScreenColorValue == FColor::Transparent)
+				if( LogArgs.ScreenColorValue == FColor::Transparent )
 				{
-					LogArgs.ScrnColor(FColor::Blue);
+					LogArgs.ScrnColor( FColor::Blue );
 				}
-				if(LogArgs.ScreenDurationValue < 0)
+				
+				if( LogArgs.ScreenDurationValue < 0 )
 				{
-					LogArgs.ScrnDuration(30);
+					LogArgs.ScrnDuration( 30 );
 				}
+
+				if ( LogArgs.bLogToSlateNotify )
+				{
+					FNotificationInfo Info{ FText::FromString( Message ) };
+					Info.ExpireDuration = 30.f;
+					FSlateNotificationManager::Get().AddNotification( Info );
+				}
+
+				if ( LogArgs.bLogToEditorMessageLog )
+				{
+					FMessageLog MsgLog(LogCategory.GetCategoryName());
+					MsgLog.Error( FText::FromString( Message ) );
+					
+					if ( LogArgs.bShowEditorMessageLogImmediately )
+					{
+						MsgLog.Open( EMessageSeverity::Type::Error );
+					}
+				}
+				
 				break;
 			}
 		default:
 		case ELogVerbosity::Verbose:
 			{
-				if(LogArgs.ScreenColorValue == FColor::Transparent)
+				if( LogArgs.ScreenColorValue == FColor::Transparent )
 				{
-					LogArgs.ScrnColor(FColor::White);
+					LogArgs.ScrnColor( FColor::White );
 				}
-				if(LogArgs.ScreenDurationValue < 0)
+				
+				if( LogArgs.ScreenDurationValue < 0 )
 				{
-					LogArgs.ScrnDuration(10);
+					LogArgs.ScrnDuration( 10 );
 				}
+
+				if ( LogArgs.bLogToSlateNotify )
+				{
+					FNotificationInfo Info{ FText::FromString( Message ) };
+					Info.ExpireDuration = 6.f;
+					FSlateNotificationManager::Get().AddNotification( Info );
+				}
+
+				if ( LogArgs.bLogToEditorMessageLog )
+				{
+					FMessageLog MsgLog(LogCategory.GetCategoryName());
+					MsgLog.Info( FText::FromString( Message ) );
+					
+					if ( LogArgs.bShowEditorMessageLogImmediately )
+					{
+						MsgLog.Open( EMessageSeverity::Type::Info );
+					}
+				}
+				
 				break;
 			}
 		}
 
+
+		if ( LogArgs.bLogToMessageDialog )
+		{
+			EAppReturnType::Type Response = FMessageDialog::Open( LogArgs.AppMsgType,
+				FText::FromString( Message ), FText::FromName( LogCategory.GetCategoryName() ) );
+
+			if ( LogArgs.AppMessageResponse )
+			{
+				LogArgs.AppMessageResponse( Response );
+			}
+		}
+
+		// Return early if we had no intention of logging to the screen/console
+		if (	LogArgs.bOnlyLogToSlateNotify
+			|| 	LogArgs.bOnlyLogToMessageDialog
+			|| (LogArgs.bLogToEditorMessageLog && LogArgs.OutputDestinationValue == EDbgLogOutput::Con) ) // The output message log already handles console logging for us.
+		{
+			return;
+		}
+
+
 		uint64 Key = 0;
-		if (LogArgs.OutputDestinationValue != EDbgLogOutput::Con)
+		if ( LogArgs.OutputDestinationValue != EDbgLogOutput::Con )
 		{
 			// Make sure we never have a key clash
 			static std::hash<std::string> Hasher;
@@ -896,6 +1064,7 @@ namespace DBG::Log
 			Key = Location.line() + Hasher( Location.function_name()) + PIEID +
 				UniqueIdentifier + ( LogArgs.ScreenKeyValue.IsSet() ? LogArgs.ScreenKeyValue.GetValue() : 0 );
 		}
+		
 
 		switch (LogArgs.OutputDestinationValue)
 		{
@@ -923,14 +1092,18 @@ namespace DBG::Log
 			}
 		case EDbgLogOutput::Both:
 			{
-				switch (LogArgs.VerbosityValue)
+				// Only output log if we arent already writing it to the msg log since that handles console outputting.
+				if (LogArgs.bLogToEditorMessageLog == false)
 				{
-					case ELogVerbosity::Display:	UE_LOG(LogCategory, Display, TEXT("%s"), *Message); break;
-					case ELogVerbosity::Warning:	UE_LOG(LogCategory, Warning, TEXT("%s"), *Message); break;
-					case ELogVerbosity::Error:		UE_LOG(LogCategory, Error,   TEXT("%s"), *Message); break;
-					case ELogVerbosity::Fatal:		UE_LOG(LogCategory, Fatal,   TEXT("%s"), *Message); break;
-					case ELogVerbosity::Verbose:	UE_LOG(LogCategory, Verbose, TEXT("%s"), *Message); break;
-					default:						UE_LOG(LogCategory, Display, TEXT("%s"), *Message); break;
+					switch (LogArgs.VerbosityValue)
+					{
+						case ELogVerbosity::Display:	UE_LOG(LogCategory, Display, TEXT("%s"), *Message); break;
+						case ELogVerbosity::Warning:	UE_LOG(LogCategory, Warning, TEXT("%s"), *Message); break;
+						case ELogVerbosity::Error:		UE_LOG(LogCategory, Error,   TEXT("%s"), *Message); break;
+						case ELogVerbosity::Fatal:		UE_LOG(LogCategory, Fatal,   TEXT("%s"), *Message); break;
+						case ELogVerbosity::Verbose:	UE_LOG(LogCategory, Verbose, TEXT("%s"), *Message); break;
+						default:						UE_LOG(LogCategory, Display, TEXT("%s"), *Message); break;
+					}
 				}
 				
 				if (GEngine)

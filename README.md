@@ -2,24 +2,32 @@
 
 
 
-This library is built on top of LLog - https://github.com/landelare/llog and adds some features on top
-such as the macros and Builder pattern for logging (more on this later). But a HUGE shout out goes
-to Laura for her work and logging articles https://landelare.github.io/2022/04/28/better-ue_log.html
+This library is built on top of LLog - https://github.com/landelare/llog and adds some features on top <br>
+such as the macros, Blueprint Support and builder pattern for logging in c++ (more on this later). <br>
+But a HUGE shout out goes to Laura for her work and logging articles https://landelare.github.io/2022/04/28/better-ue_log.html
 
 
 Supports Engine Version 5.3.2 and above and requires c++20 (which is default on 5.3 an up).
 
+Supported in both C++ and Blueprints.
+<br>
+
 
 > Installing: <br>
->  Installing is as simple as copying the `dbgLog` folder from this repo into your project.<br>
-> At the end of the day it's just two header files so as long as you update `dbgLog.h` to include `LLog.h` from where ever you place it then everything
+>  Installing is as simple as copying the `dbgLog` folder from this repo into your project and ensuring the `"Slate"` module is added as a dependency in the module using this macros `Build.cs` file.<br>
+> At the end of the day it's just three header files so as long as you update `dbgLog.h` to include `LLog.h` from where ever you place it and same with `DbgBlueprintFunctionLibrary.h` to include `dbgLog.h` then everything
 > should work fine. <br>
 > When using the macro/s you will only need to include `dbgLog.h` in your code.
 
 
 
 ![dbgLOG Usage Overview](Resources/LogOutput.png)
-> Small example of the console output of the log macros in action
+> Small example of the console output of the log macros in action.
+<div style="text-align: center;">
+	<img src="Resources/BluprintExample.png" alt="Blueprint Example" style="max-width: 50%; height: auto;">
+</div>
+
+> Also is supported in blueprints.
 
 
 This library is built off of the `std::format` function and has better formatting support than standard
@@ -163,47 +171,75 @@ argument just returns a reference to the original builder object.
 
 This style of a log macro allows for basically multiple variadic args (the builder and the format args).
 
-```cpp
-Here is a simple example of how we set the verbosity of our log
-dbgLOGV( .Verbosity( ELogVerbosity::Warning ), "No args, regular log");
-```
 
+![dbgLOG Usage Overview](Resources/VerboseOutputLogs.png)
+> Verbose log gives more places to output to and more options for the log output - see below for more details
+
+
+
+
+Here is a simple example of how we set the verbosity of our log
 ```cpp
+
+// Basic example of setting verbosity.
+dbgLOGV( .Verbosity( ELogVerbosity::Warning ), "No args, regular log");
+
+
 // Here we choose to make this log output to both screen and console 
 // (the options are `Con, Scr, Both`) Note how we chain multiple args
 dbgLOGV( .Verbosity( ELogVerbosity::Error ).Output( Both ),
 		"{0}", 3.14 );
-```
 
 
-
-
-```cpp
-//WCO gives more contextual information in the output in the format of `[Client | Instance: 0]: My value is - whatever`
-//where Client could be "Dedicated Server", "Standalone", etc.
-
-//Also we can runtime log with *whatever* category name we want (the only thing of note is we prefix all categories with "dbg" to ensure
-//we have no runtime clashes with existing categories set by the engine)
-
+// WCO gives more contextual information in the output in the format of 
+// `[Client | Instance: 0]: My value is - whatever`
+// where Client could be "Dedicated Server", "Standalone", etc.
+// Also we can runtime log with *whatever* category name we want 
+// (the only thing of note is we prefix all categories with "dbg" to ensure
+// we have no runtime clashes with existing categories set by the engine)
 dbgLOGV( .Category( "MyCustomCategory" ).WCO( this ),
 	"My value is - {0}", GetSomeValue);
-```
 
 
-```cpp
-// `Condition` is great for ensuring conditions and branches for logging are not actually kept in shipping builds (this is my favorite)
-`dbgLOGV( .Condition( false ), "I only log if the condition is true {0}", GetWorld()->GetTimeSeconds() );`
 
-```
+// `Condition` is great for ensuring conditions and branches 
+// for logging are not actually kept in shipping builds (this is my favorite)
+dbgLOGV( .Condition( false ), "I only log if the condition is true {0}", GetWorld()->GetTimeSeconds() );
 
-```cpp
+
 // Using a completely different runtime category here and showing how we can
 // not only log the date and time but also control how it's presented in the log
-	dbgLOGV( .Category( "MyCustomRuntimeLogCategory" ).WCO( this )
-			 .LogDateAndTime(TEXT("%d/%m/%y %H:%M:%S")),
-			 "Using a custom date time format" );
-```
+dbgLOGV( .Category( "MyCustomRuntimeLogCategory" ).WCO( this )
+			.LogDateAndTime(TEXT("%d/%m/%y %H:%M:%S")),
+			"Using a custom date time format" );
 
+
+// Spawns a slate notification popup in the bottom right - 
+// the verbosity of the log dictates the notify show duration.
+dbgLOGV( .LogToSlateNotify(), "My Slate Notify" ); // Shows for 6s
+dbgLOGV( .LogToSlateNotify().Verbosity( ELogVerbosity::Error ), "My Slate Notify" ); // Shows for 30s
+
+
+// Spawns a message dialog for the programmer to interact with, also 
+// provides a callback for what they chose - you can pass null if you
+// do not want to respond to the selected option.
+dbgLOGV( .LogToMessageDialog( [](EAppReturnType::Type Result)
+{
+	dbgLOG( "The user selected {0}", Result);
+}, EAppMsgType::YesNo ), "Should Do Thing?" );
+
+
+// Outputs our log to the Editors Message Log which is an external window, 
+// mostly seen when you get validation errors or
+// things like a nullptr in a blueprint graph.
+dbgLOGV( .LogToEditorMessageLog(), "Something is wrong Info.");
+
+
+// You can also set the verbosity of the message log message, defaults to "info" otherwise.
+dbgLOGV( .LogToEditorMessageLog().Verbosity( ELogVerbosity::Warning ),
+	"Something is wrong Warning.");
+
+```
 
 
 Visual logger and Debug shapes are also supported as Builder args, examples below:
@@ -212,16 +248,14 @@ Visual logger and Debug shapes are also supported as Builder args, examples belo
 // Draws this actor's bounds into the visual logger (the reason for this, this is because
 // it takes the log owner and the actor to draw which can be different in certain circumstances)
 // We can only have one type of visual log per macro though.
-
 dbgLOGV( .VisualLogBounds( this, this ),
 	"Visual Log Test {0}", GetWorld()->GetTimeSeconds());
-```
 
 
-```cpp
 // Many different DrawDebugShape functions are supported to ensure they 
 // are compiled out of shipping builds and the usage of this library is streamlined
 dbgLOGV( .DrawDebugSphere( this, GetActorLocation(), 50.f, 12 ), "Drawing Sphere...");
+
 ```
 
 There are many more options to pick from with the dbgLOGV macro, as you type `.` in the first param of the macro you will see all the options available to you via intellisense.
