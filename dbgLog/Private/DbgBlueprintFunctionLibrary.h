@@ -82,7 +82,7 @@ enum struct EDbgLogVerbosity : uint8
 
 
 UCLASS()
-class SANDBOX_API UDbgBlueprintFunctionLibrary : public UBlueprintFunctionLibrary
+class UDbgBlueprintFunctionLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 public:
