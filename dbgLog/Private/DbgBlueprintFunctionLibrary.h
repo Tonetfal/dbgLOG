@@ -19,7 +19,6 @@
 //
 //  0. You just DO WHAT THE FUCK YOU WANT TO.
 #pragma once
-
 #include "Kismet/BlueprintFunctionLibrary.h"
 
 // Relative path is assumed, must update if you move the files around.
@@ -97,7 +96,4 @@ public:
 		EDbgLogVerbosity LogVerbosity,
 		FDbgLogArgs LogExtraArgs
 		);
-	
-
-	
 };

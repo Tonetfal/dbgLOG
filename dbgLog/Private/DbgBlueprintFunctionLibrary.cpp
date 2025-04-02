@@ -42,10 +42,16 @@ void UDbgBlueprintFunctionLibrary::OutputLog(UObject* WorldContextObject,
 
 	DBG::Log::DbgLogArgs LogArgs;
 	
-	LogArgs.Output( LogOutput ).Category( LogCategory ).Verbosity( LV )
+	LogArgs.Category( LogCategory ).Verbosity( LV )
 	.WCO( LogExtraArgs.bPrefixPIEInstanceInfo ? WorldContextObject : nullptr )
 	.ScrnColor( LogExtraArgs.ScreenColor ).ScrnDuration( LogExtraArgs.ScreenDuration );
 
+	switch (LogOutput)
+	{
+		case EDbgLogOutput::Con: LogArgs.Console(); break;
+		case EDbgLogOutput::Scr: LogArgs.Screen(); break;
+		case EDbgLogOutput::Both: LogArgs.ScreenAndConsole(); break;
+	}
 
 	if ( LogExtraArgs.bLogDateAndTime )
 	{
