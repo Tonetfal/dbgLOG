@@ -1255,7 +1255,6 @@ namespace DBG::Log
 				if (LogArgs.bLogToEditorMessageLog == false)
 				{
 					OutputLog(Location, (*LogCategory), LogArgs.VerbosityValue, Message);
-					break;
 				}
 				
 				if (GEngine)
