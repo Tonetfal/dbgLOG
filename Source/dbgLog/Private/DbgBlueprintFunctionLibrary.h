@@ -22,7 +22,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 
 // Relative path is assumed, must update if you move the files around.
-#include "../dbgLog.h"
+#include "dbgLog.h"
 #include "DbgBlueprintFunctionLibrary.generated.h"
 
 
@@ -46,7 +46,7 @@ public:
 	// If true the log is prefixed with the netmode and PIE instance number.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bPrefixPIEInstanceInfo = true;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bLogDateAndTime = false;
 

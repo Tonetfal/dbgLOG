@@ -19,7 +19,7 @@
 //
 //  0. You just DO WHAT THE FUCK YOU WANT TO.
 #pragma once
-#include "../dbgLog.h" // Relative path that must be updated if you move the files location.
+#include "dbgLog.h" // Relative path that must be updated if you move the files location.
 
 
 #if KEEP_DBG_LOG
@@ -52,7 +52,7 @@ FAutoConsoleCommand EnableCategoryCommand
 					DBG::Log::GDbgLogSingleton.SetCategoryState<true>(CategoryName, true);
 				}
 			}
-			
+
 		}),
 		ECVF_Cheat
 	};
@@ -70,7 +70,7 @@ FAutoConsoleCommand DisableCategoryCommand
 				return;
 			}
 
-			
+
 			if (Input[0] == "All")
 			{
 				for (auto& [_, Cat] : DBG::Log::GDbgLogSingleton.CategoryMap)
@@ -112,10 +112,10 @@ FAutoConsoleCommand PrintDisabledCategories
 					CategoriesBuilder.Appendf(TEXT("- [Enabled]  %s\n"), *CategoryName.ToString());
 				}
 			}
-			
+
 			if (CategoriesBuilder.Len() > 0)
 			{
-				UE_LOG(dbgLOG, Display, TEXT("Categories: Enabled = %d, Disabled = %d \n%s"), EnabledCategoriesNum, DisabledCategoriesNum, CategoriesBuilder.ToString());	
+				UE_LOG(dbgLOG, Display, TEXT("Categories: Enabled = %d, Disabled = %d \n%s"), EnabledCategoriesNum, DisabledCategoriesNum, CategoriesBuilder.ToString());
 			}
 			else
 			{
@@ -141,4 +141,4 @@ namespace DBG::Log
 
 #endif
 
-
+IMPLEMENT_MODULE(FDefaultModuleImpl, dbgLog)

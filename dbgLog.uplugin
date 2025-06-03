@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "dbgLog",
+	"Description": "Improved logging",
+	"Category": "Programming",
+	"CreatedBy": "itsBaffled",
+	"CreatedByURL": "https://github.com/itsBaffled",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/tonetfal/dbgLOG",
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "dbgLog",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+    ]
+}
